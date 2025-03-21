@@ -2,57 +2,72 @@ import uuid
 from hashlib import sha256
 from fastapi import APIRouter, Body, HTTPException, Header
 from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 
 users = {}
+new_user_id = 0
 tokens = {}
 
 
 class User(BaseModel):
+    id: Optional[int] = None
     username: str
     password: bytes
     mail: str
-    age_of_birth: int
+    year_of_birth: int
 
 
 class RegisterInput(BaseModel):
     username: str
     password: str
     mail: str
-    age_of_birth: int
+    year_of_birth: int
 
 
 class RegisterOutput(BaseModel):
+    id: int
     username: str
     mail: str
-    age_of_birth: int
+    year_of_birth: int
 
 
 @router.post("/register")
-async def auth_register(input: RegisterInput = Body()) -> dict[str, RegisterOutput]:
-    if input.username in users:
+async def auth_register(register_input: RegisterInput = Body()) -> dict[str, RegisterOutput]:
+    global new_user_id
+
+    if is_username_taken(register_input.username):
         raise HTTPException(status_code=409, detail="This username is already taken")
 
-    to_hash = input.username + input.password
+    to_hash = register_input.username + register_input.password
     hashed_password = sha256(to_hash.encode()).digest()
 
-    new_user = User(
-        username=input.username,
+    users[new_user_id] = User(
+        id=new_user_id,
+        username=register_input.username,
         password=hashed_password,
-        mail=input.mail,
-        age_of_birth=input.age_of_birth,
+        mail=register_input.mail,
+        year_of_birth=register_input.year_of_birth,
     )
-
-    users[input.username] = new_user
 
     output = RegisterOutput(
-        username=input.username,
-        mail=input.mail,
-        age_of_birth=input.age_of_birth,
+        id=new_user_id,
+        username=register_input.username,
+        mail=register_input.mail,
+        year_of_birth=register_input.year_of_birth,
     )
 
+    new_user_id += 1
+
     return {"new_user": output}
+
+
+def is_username_taken(username: str) -> bool:
+    for user_id, user in users.items():
+        if user.username == username:
+            return True
+    return False
 
 
 class LoginInput(BaseModel):
@@ -61,31 +76,40 @@ class LoginInput(BaseModel):
 
 
 @router.post("/login")
-async def auth_login(input: LoginInput = Body()) -> dict[str, str]:
-    if input.username not in users:
+async def auth_login(login_input: LoginInput = Body()) -> dict[str, str]:
+    user = get_user_by_username(login_input.username)
+    if not user:
         raise HTTPException(status_code=404, detail='Username not found')
 
-    to_hash = input.username + input.password
+    to_hash = login_input.username + login_input.password
     hashed_password = sha256(to_hash.encode()).digest()
-    hashed_stored_password = users[input.username].password
+    hashed_stored_password = user.password
 
     if hashed_password == hashed_stored_password:
-        random_id = str(uuid.uuid4())
-        while random_id in tokens:
-            random_id = str(uuid.uuid4())
+        token = str(uuid.uuid4())
+        while token in tokens:
+            token = str(uuid.uuid4())
 
-        tokens[random_id] = input.username
+        tokens[token] = user.id
 
-        return {"auth": random_id}
+        return {"auth": token}
 
     else:
         raise HTTPException(status_code=403, detail='Password is not correct')
 
 
+def get_user_by_username(username: str) -> Optional[User]:
+    for user_id, user in users.items():
+        if user.username == username:
+            return user
+    return None
+
+
 class IntrospectOutput(BaseModel):
+    id: int
     username: str
     mail: str
-    age_of_birth: int
+    year_of_birth: int
 
 
 @router.get("/introspect")
@@ -93,13 +117,13 @@ async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
     if auth not in tokens:
         raise HTTPException(status_code=403, detail='Forbidden')
 
-    username = tokens[auth]
-    user = users[username]
+    user = users[tokens[auth]]
 
     return IntrospectOutput(
+        id=user.id,
         username=user.username,
         mail=user.mail,
-        age_of_birth=user.age_of_birth,
+        year_of_birth=user.year_of_birth,
     )
 
 

@@ -16,7 +16,7 @@ files = {}
 class FileModel(BaseModel):
     filename: str
     path: str
-    author: str
+    owner: int
     desc: str
     number_of_pages: int
 
@@ -32,10 +32,10 @@ async def get_files(auth: str = Header()) -> list[dict[str, FileModel]]:
     user = await auth_check(auth)
 
     result = []
-    username = user['username']
+    user_id = user['id']
 
     for key, value in files.items():
-        if value.author == username:
+        if value.owner == user_id:
             result.append({key: value})
 
     return result
@@ -55,7 +55,7 @@ async def post_file(
     files[file_id] = FileModel(
         filename=data_input.filename,
         path='',
-        author=user['username'],
+        owner=user['id'],
         desc=data_input.desc,
         number_of_pages=data_input.number_of_pages
     )
@@ -80,7 +80,7 @@ async def merge_files(
 
     file1 = files[input_data.file_id1]
     file2 = files[input_data.file_id2]
-    if file1.author != user['username'] or file2.author != user['username']:
+    if file1.owner != user['id'] or file2.owner != user['id']:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     merged_id = str(uuid.uuid4())
@@ -121,7 +121,7 @@ async def post_file_by_id(
 
     file = files[file_id]
 
-    if user['username'] != file.author:
+    if user['id'] != file.owner:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     prefix = 'files/'
@@ -146,7 +146,7 @@ async def get_file_by_id(
 
     file = files[file_id]
 
-    if user['username'] != file.author:
+    if user['id'] != file.owner:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     return FileResponse(
@@ -168,7 +168,7 @@ async def delete_file_by_id(
 
     file = files[file_id]
 
-    if user['username'] != file.author:
+    if user['id'] != file.owner:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     if file.path != '':
