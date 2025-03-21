@@ -24,6 +24,6 @@ metadata = [
     }
 ]
 
-app = FastAPI(title='Activity02', description=description, tags_metadata=metadata)
+app = FastAPI(title='Activity03', description=description, tags_metadata=metadata)
 app.include_router(authentication_router, prefix='/auth', tags=['Authentication'])
 app.include_router(files_router, prefix='/files', tags=['Files'])
