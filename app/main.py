@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.authentication.router import router as authentication_router
+from app.authentication.api.router import router as authentication_router
 from app.files.router import router as files_router
 
 description = """
