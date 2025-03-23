@@ -91,10 +91,10 @@ async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     return IntrospectOutput(
-        id=int(user['id']),
-        username=user['username'],
-        mail=user['mail'],
-        year_of_birth=user['year_of_birth'],
+        id=user.id,
+        username=user.username,
+        mail=user.mail,
+        year_of_birth=user.year_of_birth
     )
 
 

@@ -38,20 +38,20 @@ class UserBOPostgresPersistenceService(UserBOInterface):
             "year_of_birth": user.year_of_birth
         }
 
-    async def get_user_by_id(self, user_id: int) -> Optional[dict[str, str]]:
+    async def get_user_by_id(self, user_id: int) -> Optional[UserBO]:
         try:
             user = await UserDB.get(id=int(user_id))
 
         except DoesNotExist:
             return None
 
-        return {
-            'id': str(user.id),
-            'username': user.username,
-            'password': user.password,
-            'mail': user.mail,
-            'year_of_birth': user.year_of_birth
-        }
+        return UserBO(
+            id=user.id,
+            username=user.username,
+            password=user.password,
+            mail=user.mail,
+            year_of_birth=user.year_of_birth
+        )
 
     async def create_token(self, user_id: int) -> str:
         token = str(uuid.uuid4())
@@ -65,8 +65,6 @@ class UserBOPostgresPersistenceService(UserBOInterface):
         return token
 
     async def get_user_id_by_token(self, token: str) -> Optional[int]:
-        print('Control1')
-
         db_result = await TokenDB.filter(**{"token": token})
         if len(db_result) == 0:
             return None
