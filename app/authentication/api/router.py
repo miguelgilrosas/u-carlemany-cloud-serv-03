@@ -19,7 +19,6 @@ class RegisterInput(BaseModel):
 
 
 class RegisterOutput(BaseModel):
-    id: int
     username: str
     mail: str
     year_of_birth: int
@@ -33,7 +32,7 @@ async def auth_register(register_input: RegisterInput = Body()) -> dict[str, Reg
     register_controller = RegisterControllers.carlemany()
 
     try:
-        user = register_controller(
+        user = await register_controller(
             username=register_input.username,
             password=register_input.password,
             mail=register_input.mail,
@@ -44,7 +43,6 @@ async def auth_register(register_input: RegisterInput = Body()) -> dict[str, Reg
         raise HTTPException(status_code=409, detail="This username is already taken")
 
     output = RegisterOutput(
-        id=user.id,
         username=user.username,
         mail=user.mail,
         year_of_birth=user.year_of_birth
@@ -66,7 +64,7 @@ async def auth_login(login_input: LoginInput = Body()) -> dict[str, str]:
     login_controller = LoginControllers.carlemany()
 
     try:
-        token = login_controller(username=login_input.username, password=login_input.password)
+        token = await login_controller(username=login_input.username, password=login_input.password)
 
     except UsernameNotFoundException:
         raise HTTPException(status_code=404, detail='Username not found')
@@ -88,15 +86,15 @@ class IntrospectOutput(BaseModel):
 async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
     introspect_controller = IntrospectControllers.carlemany()
 
-    user = introspect_controller(token=auth)
+    user = await introspect_controller(token=auth)
     if user is None:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     return IntrospectOutput(
-        id=user.id,
-        username=user.username,
-        mail=user.mail,
-        year_of_birth=user.year_of_birth,
+        id=int(user['id']),
+        username=user['username'],
+        mail=user['mail'],
+        year_of_birth=user['year_of_birth'],
     )
 
 
@@ -105,7 +103,7 @@ async def auth_logout(auth: str = Header()) -> dict[str, str]:
     logout_controller = LogoutControllers.carlemany()
 
     try:
-        logout_controller(token=auth)
+        await logout_controller(token=auth)
 
     except BadTokenException:
         raise HTTPException(status_code=403, detail='Forbidden')

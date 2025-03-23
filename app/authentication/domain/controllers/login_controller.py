@@ -8,17 +8,17 @@ class LoginController:
     def __init__(self, user_persistence_service: UserBOInterface):
         self.user_persistence_service = user_persistence_service
 
-    def __call__(self, username: str, password: str) -> str:
-        user = self.user_persistence_service.get_user_by_username(username=username)
+    async def __call__(self, username: str, password: str) -> str:
+        user = await self.user_persistence_service.get_user_by_username(username=username)
         if not user:
             raise UsernameNotFoundException
 
         to_hash = username + password
-        hashed_password = sha256(to_hash.encode()).digest()
-        hashed_stored_password = user.password
+        hashed_password = str(sha256(to_hash.encode()).digest().hex())
+        hashed_stored_password = user['password']
 
         if hashed_password == hashed_stored_password:
-            token = self.user_persistence_service.create_token(user_id=user.id)
+            token = await self.user_persistence_service.create_token(user_id=int(user['id']))
 
             return token
 

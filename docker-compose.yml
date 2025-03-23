@@ -6,6 +6,8 @@ services:
       context: .
       target: carlemany-backend-dev
     image: carlemany-backend-dev
+    depends_on:
+      - postgres
     volumes:
       - type: bind
         source: .
@@ -16,6 +18,70 @@ services:
       - "8000:80"
     networks:
       - carlemany-net
+
+  postgres:
+    image: postgres:13.4-alpine3.14
+    environment:
+      - POSTGRES_DB=${PSQL_DB_DATABASE}
+      - POSTGRES_USER=${PSQL_DB_USERNAME}
+      - POSTGRES_PASSWORD=${PSQL_DB_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - type: volume
+        source: carlemany-backend-data
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -d ${PSQL_DB_DATABASE} -U ${PSQL_DB_USERNAME}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - carlemany-net
+
+  make_migrations:
+    image: carlemany-backend-dev
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: .
+        target: /carlemany-backend
+    networks:
+      - carlemany-net
+    depends_on:
+      - postgres
+    entrypoint: aerich migrate
+
+  migrate:
+    image: carlemany-backend-dev
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: .
+        target: /carlemany-backend
+    networks:
+      - carlemany-net
+    depends_on:
+      - postgres
+    entrypoint: aerich upgrade
+
+  init_db:
+    image: carlemany-backend-dev
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: .
+        target: /carlemany-backend
+    networks:
+      - carlemany-net
+    depends_on:
+      - postgres
+    entrypoint: sh infra/init_db.sh
 
   black:
     image: carlemany-backend-dev:latest
@@ -50,6 +116,8 @@ services:
     <<: *test
     entrypoint: pytest --maxfail=10 --cov --cov-report=term --cov-report=html --junitxml=tests/test-results/junit.xml
 
-
 networks:
   carlemany-net:
+
+volumes:
+  carlemany-backend-data:

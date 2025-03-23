@@ -9,9 +9,9 @@ class RegisterController:
     def __init__(self, user_persistence_service: UserBOInterface):
         self.user_persistence_service = user_persistence_service
 
-    def __call__(self, username: str, password: str, mail: str, year_of_birth: int) -> UserBO:
+    async def __call__(self, username: str, password: str, mail: str, year_of_birth: int) -> UserBO:
         to_hash = username + password
-        hashed_password = sha256(to_hash.encode()).digest()
+        hashed_password = str(sha256(to_hash.encode()).digest().hex())
 
         new_user = UserBO(
             username=username,
@@ -21,7 +21,8 @@ class RegisterController:
         )
 
         try:
-            self.user_persistence_service.create_user(user=new_user)
+            await self.user_persistence_service.create_user(user=new_user)
+
         except UsernameAlreadyTakenException:
             raise UsernameAlreadyTakenException
 
