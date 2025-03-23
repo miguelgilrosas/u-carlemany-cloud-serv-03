@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Body, HTTPException, Header
 from pydantic import BaseModel
 
-from app.authentication.domain.controllers.introspect_controller import IntrospectController
-from app.authentication.domain.controllers.login_controller import LoginController
-from app.authentication.domain.controllers.logout_controller import LogoutController
-from app.authentication.domain.controllers.register_controller import RegisterController
+from app.authentication.dependency_injection.domain.introspect_controllers import IntrospectControllers
+from app.authentication.dependency_injection.domain.login_controllers import LoginControllers
+from app.authentication.dependency_injection.domain.logout_controllers import LogoutControllers
+from app.authentication.dependency_injection.domain.register_controllers import RegisterControllers
 from app.authentication.domain.persistences.exceptions import UsernameAlreadyTakenException, WrongPasswordException, \
     UsernameNotFoundException, BadTokenException
 from app.authentication.persistence.memory.user_bo import UserBOMemoryPersistenceService
@@ -33,7 +33,7 @@ async def auth_register(register_input: RegisterInput = Body()) -> dict[str, Reg
     if register_input.username == '' or register_input.password == '':
         raise HTTPException(status_code=400, detail='Username and password can not be empty')
 
-    register_controller = RegisterController(user_persistence_service=user_persistence_service)
+    register_controller = RegisterControllers.carlemany()
 
     try:
         user = register_controller(
@@ -66,7 +66,7 @@ async def auth_login(login_input: LoginInput = Body()) -> dict[str, str]:
     if login_input.username == '' or login_input.password == '':
         raise HTTPException(status_code=400, detail='Username and password can not be empty')
 
-    login_controller = LoginController(user_persistence_service=user_persistence_service)
+    login_controller = LoginControllers.carlemany()
 
     try:
         token = login_controller(username=login_input.username, password=login_input.password)
@@ -89,7 +89,7 @@ class IntrospectOutput(BaseModel):
 
 @router.get("/introspect")
 async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
-    introspect_controller = IntrospectController(user_persistence_service=user_persistence_service)
+    introspect_controller = IntrospectControllers.carlemany()
 
     user = introspect_controller(token=auth)
     if user is None:
@@ -105,7 +105,7 @@ async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
 
 @router.post("/logout")
 async def auth_logout(auth: str = Header()) -> dict[str, str]:
-    logout_controller = LogoutController(user_persistence_service=user_persistence_service)
+    logout_controller = LogoutControllers.carlemany()
 
     try:
         logout_controller(token=auth)
