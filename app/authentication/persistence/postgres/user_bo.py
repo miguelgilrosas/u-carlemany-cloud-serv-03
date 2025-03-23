@@ -23,20 +23,20 @@ class UserBOPostgresPersistenceService(UserBOInterface):
 
         user.id = new_user.id
 
-    async def get_user_by_username(self, username: str) -> Optional[dict[str, str]]:
+    async def get_user_by_username(self, username: str) -> Optional[UserBO]:
         try:
             user = await UserDB.get(username=username)
 
         except DoesNotExist:
             return None
 
-        return {
-            "id": user.id,
-            "username": user.username,
-            "password": user.password,
-            "mail": user.mail,
-            "year_of_birth": user.year_of_birth
-        }
+        return UserBO(
+            id=user.id,
+            username=user.username,
+            password=user.password,
+            mail=user.mail,
+            year_of_birth=user.year_of_birth
+        )
 
     async def get_user_by_id(self, user_id: int) -> Optional[UserBO]:
         try:

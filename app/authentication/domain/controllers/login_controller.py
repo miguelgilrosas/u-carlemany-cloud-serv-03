@@ -15,10 +15,10 @@ class LoginController:
 
         to_hash = username + password
         hashed_password = str(sha256(to_hash.encode()).digest().hex())
-        hashed_stored_password = user['password']
+        hashed_stored_password = user.password
 
         if hashed_password == hashed_stored_password:
-            token = await self.user_persistence_service.create_token(user_id=int(user['id']))
+            token = await self.user_persistence_service.create_token(user_id=user.id)
 
             return token
 
