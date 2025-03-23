@@ -7,7 +7,6 @@ from app.authentication.dependency_injection.domain.logout_controllers import Lo
 from app.authentication.dependency_injection.domain.register_controllers import RegisterControllers
 from app.authentication.domain.persistences.exceptions import UsernameAlreadyTakenException, WrongPasswordException, \
     UsernameNotFoundException, BadTokenException
-from app.authentication.persistence.memory.user_bo import UserBOMemoryPersistenceService
 
 router = APIRouter()
 
