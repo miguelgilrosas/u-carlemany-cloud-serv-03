@@ -13,14 +13,6 @@ authentication_url = '0.0.0.0'
 files = {}
 
 
-class FileModel(BaseModel):
-    filename: str
-    path: str
-    owner: int
-    desc: str
-    number_of_pages: int
-
-
 class FileInput(BaseModel):
     filename: str
     desc: str

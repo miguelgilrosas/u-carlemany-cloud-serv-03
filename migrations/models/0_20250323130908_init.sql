@@ -11,6 +11,14 @@ CREATE TABLE IF NOT EXISTS "userdb" (
     "mail" VARCHAR(75) NOT NULL,
     "year_of_birth" INT
 );
+CREATE TABLE IF NOT EXISTS "filedb" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "filename" VARCHAR(100) NOT NULL,
+    "path" VARCHAR(200) NOT NULL,
+    "owner" INT NOT NULL,
+    "desc" VARCHAR(400) NOT NULL,
+    "number_of_pages" INT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS "aerich" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "version" VARCHAR(255) NOT NULL,

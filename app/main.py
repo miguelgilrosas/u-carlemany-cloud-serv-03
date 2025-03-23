@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from tortoise.contrib.fastapi import register_tortoise
 
 from app.authentication.api.router import router as authentication_router
-from app.files.router import router as files_router
+from app.files.api.router import router as files_router
 from app.config import DATABASE_URL, models
 
 description = """
