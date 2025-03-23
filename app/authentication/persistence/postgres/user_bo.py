@@ -72,9 +72,8 @@ class UserBOPostgresPersistenceService(UserBOInterface):
         return db_result[0].user_id
 
     async def delete_token(self, token: str):
-        token_db = await TokenDB.get(token=token)
-
-        if not token_db:
+        db_result = await TokenDB.filter(**{"token": token})
+        if len(db_result) == 0:
             raise BadTokenException
 
-        await token_db.delete()
+        await db_result[0].delete()
