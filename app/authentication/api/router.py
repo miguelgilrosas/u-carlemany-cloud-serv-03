@@ -11,8 +11,6 @@ from app.authentication.persistence.memory.user_bo import UserBOMemoryPersistenc
 
 router = APIRouter()
 
-user_persistence_service = UserBOMemoryPersistenceService()
-
 
 class RegisterInput(BaseModel):
     username: str
