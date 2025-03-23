@@ -7,13 +7,11 @@ from app.authentication.domain.controllers.logout_controller import LogoutContro
 from app.authentication.domain.controllers.register_controller import RegisterController
 from app.authentication.domain.persistences.exceptions import UsernameAlreadyTakenException, WrongPasswordException, \
     UsernameNotFoundException, BadTokenException
-from app.authentication.persistence.memory.token import TokenMemoryPersistenceService
 from app.authentication.persistence.memory.user_bo import UserBOMemoryPersistenceService
 
 router = APIRouter()
 
 user_persistence_service = UserBOMemoryPersistenceService()
-token_persistence_service = TokenMemoryPersistenceService()
 
 
 class RegisterInput(BaseModel):
@@ -68,10 +66,7 @@ async def auth_login(login_input: LoginInput = Body()) -> dict[str, str]:
     if login_input.username == '' or login_input.password == '':
         raise HTTPException(status_code=400, detail='Username and password can not be empty')
 
-    login_controller = LoginController(
-        user_persistence_service=user_persistence_service,
-        token_persistence_service=token_persistence_service
-    )
+    login_controller = LoginController(user_persistence_service=user_persistence_service)
 
     try:
         token = login_controller(username=login_input.username, password=login_input.password)
@@ -94,10 +89,7 @@ class IntrospectOutput(BaseModel):
 
 @router.get("/introspect")
 async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
-    introspect_controller = IntrospectController(
-        user_persistence_service=user_persistence_service,
-        token_persistence_service=token_persistence_service
-    )
+    introspect_controller = IntrospectController(user_persistence_service=user_persistence_service)
 
     user = introspect_controller(token=auth)
     if user is None:
@@ -113,7 +105,7 @@ async def auth_introspect(auth: str = Header()) -> IntrospectOutput:
 
 @router.post("/logout")
 async def auth_logout(auth: str = Header()) -> dict[str, str]:
-    logout_controller = LogoutController(token_persistence_service=token_persistence_service)
+    logout_controller = LogoutController(user_persistence_service=user_persistence_service)
 
     try:
         logout_controller(token=auth)
