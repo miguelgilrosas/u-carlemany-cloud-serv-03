@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Body, UploadFile, File, Header, HTTPException
 from fastapi.responses import FileResponse
-from pypdf import PdfMerger
 import uuid
 from pydantic import BaseModel
 
 from app.files.dependency_injection.domain.delete_file_controllers import DeleteFileControllers
 from app.files.dependency_injection.domain.get_file_controllers import GetFileControllers
 from app.files.dependency_injection.domain.get_files_by_token_controllers import GetFilesByTokenControllers
+from app.files.dependency_injection.domain.merge_files_controllers import MergeFilesControllers
 from app.files.dependency_injection.domain.post_file_content_controllers import PostFileContentControllers
 from app.files.dependency_injection.domain.post_file_controllers import PostFileControllers
 from app.files.domain.bo.file_bo import FileBO
@@ -61,48 +61,27 @@ async def post_file(
 
 
 class MergeInput(BaseModel):
-    file_id1: str
-    file_id2: str
+    file_id1: int
+    file_id2: int
 
 
 @router.post("/merge")
 async def merge_files(
     input_data: MergeInput = Body(),
     auth: str = Header()
-) -> dict[str, str]:
-    user = await auth_check(auth)
+) -> dict[str, int]:
+    merge_files_controller = MergeFilesControllers.carlemany()
 
-    if input_data.file_id1 not in files or input_data.file_id2 not in files:
-        raise HTTPException(status_code=404, detail='Not found')
+    try:
+        new_file_id = await merge_files_controller(file_id1=input_data.file_id1, file_id2=input_data.file_id2, token=auth)
 
-    file1 = files[input_data.file_id1]
-    file2 = files[input_data.file_id2]
-    if file1.owner != user['id'] or file2.owner != user['id']:
+    except BadTokenException:
         raise HTTPException(status_code=403, detail='Forbidden')
 
-    merged_id = str(uuid.uuid4())
-    while merged_id in files:
-        merged_id = str(uuid.uuid4())
-    merged = "files/" + merged_id + ".pdf"
-    pdfs = [file1.path, file2.path]
-    merger = PdfMerger()
+    except NotFoundException:
+        raise HTTPException(status_code=404, detail='Not found')
 
-    for pdf in pdfs:
-        merger.append(pdf)
-
-    name = merged
-    merger.write(name)
-    merger.close()
-
-    files[merged_id] = FileModel(
-        filename='Merged.pdf',
-        path=merged,
-        author=user['username'],
-        desc='Merged file created from "' + file1.path + '" and "' + file2.path + '"',
-        number_of_pages=file1.number_of_pages + file2.number_of_pages
-    )
-
-    return {"file_id": merged_id}
+    return {"file_id": new_file_id}
 
 
 @router.post("/{file_id}")

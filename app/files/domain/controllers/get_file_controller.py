@@ -1,5 +1,3 @@
-from fastapi.responses import FileResponse
-
 from app.files.domain.persistences.file_bo_interface import FileBOInterface
 from app.files.domain.bo.file_bo import FileBO
 from app.files.domain.persistences.exceptions import BadTokenException, NotFoundException
