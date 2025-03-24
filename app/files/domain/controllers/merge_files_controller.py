@@ -36,13 +36,11 @@ class MergeFilesController:
             desc='Merged file created from "' + file1.path + '" and "' + file2.path + '"',
             number_of_pages=file1.number_of_pages + file2.number_of_pages
         )
-        print('HOLA1')
+
         new_file = await self.file_persistence_service.post_file(new_file)
-        print('HOLA2')
         new_file.path = "files/" + str(new_file.id) + ".pdf"
         await self.file_persistence_service.update_file(file_id=new_file.id, data=new_file)
 
-        print('HOLA3')
         merged = new_file.path
         pdfs = [file1.path, file2.path]
         merger = PdfMerger()
