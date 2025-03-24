@@ -22,7 +22,7 @@ class GetFileController:
         except NotFoundException:
             raise NotFoundException
 
-        if user['id'] != file.id:
+        if user['id'] != file.owner:
             raise BadTokenException
 
         return file
