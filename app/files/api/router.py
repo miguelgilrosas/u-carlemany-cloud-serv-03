@@ -3,13 +3,16 @@ from fastapi.responses import FileResponse
 from pypdf import PdfMerger
 import uuid
 from pydantic import BaseModel
-import aiohttp
-import json
 import os
+
+from app.files.dependency_injection.domain.get_files_by_token_controllers import GetFilesByTokenControllers
+from app.files.dependency_injection.domain.post_file_content_controllers import PostFileContentControllers
+from app.files.dependency_injection.domain.post_file_controllers import PostFileControllers
+from app.files.domain.bo.file_bo import FileBO
+from app.files.domain.persistences.exceptions import BadTokenException, NotFoundException
 
 router = APIRouter()
 
-authentication_url = '0.0.0.0'
 files = {}
 
 
@@ -20,15 +23,14 @@ class FileInput(BaseModel):
 
 
 @router.get("/")
-async def get_files(auth: str = Header()) -> list[dict[str, FileModel]]:
-    user = await auth_check(auth)
+async def get_files(auth: str = Header()) -> list[FileBO]:
+    get_files_by_token_controller = GetFilesByTokenControllers.carlemany()
 
-    result = []
-    user_id = user['id']
+    try:
+        result = await get_files_by_token_controller(token=auth)
 
-    for key, value in files.items():
-        if value.owner == user_id:
-            result.append({key: value})
+    except BadTokenException:
+        raise HTTPException(status_code=403, detail='Forbidden')
 
     return result
 
@@ -37,22 +39,24 @@ async def get_files(auth: str = Header()) -> list[dict[str, FileModel]]:
 async def post_file(
     data_input: FileInput = Body(),
     auth: str = Header()
-) -> dict[str, str]:
-    user = await auth_check(auth)
+) -> FileBO:
 
-    file_id = str(uuid.uuid4())
-    while file_id in files:
-        file_id = str(uuid.uuid4())
-
-    files[file_id] = FileModel(
+    file = FileBO(
         filename=data_input.filename,
         path='',
-        owner=user['id'],
+        owner=-1,
         desc=data_input.desc,
         number_of_pages=data_input.number_of_pages
     )
 
-    return {'file_id': file_id}
+    post_file_controller = PostFileControllers.carlemany()
+    try:
+        result = await post_file_controller(token=auth, file=file)
+
+    except BadTokenException:
+        raise HTTPException(status_code=403, detail='Forbidden')
+
+    return result
 
 
 class MergeInput(BaseModel):
@@ -102,28 +106,20 @@ async def merge_files(
 
 @router.post("/{file_id}")
 async def post_file_by_id(
-    file_id: str,
+    file_id: int,
     auth: str = Header(),
     input_file: UploadFile = File()
 ) -> dict[str, str]:
-    user = await auth_check(auth)
+    post_file_content_controller = PostFileContentControllers.carlemany()
 
-    if file_id not in files:
+    try:
+        return await post_file_content_controller(file_id=file_id, token=auth, input_file=input_file)
+
+    except NotFoundException:
         raise HTTPException(status_code=404, detail='Not found')
 
-    file = files[file_id]
-
-    if user['id'] != file.owner:
+    except BadTokenException:
         raise HTTPException(status_code=403, detail='Forbidden')
-
-    prefix = 'files/'
-    path = prefix + file_id + '.pdf'
-    with open(path, "wb") as buffer:
-        while chunk := await input_file.read(8192):
-            buffer.write(chunk)
-    file.path = path
-
-    return {"status": "ok"}
 
 
 @router.get("/{file_id}")
@@ -168,26 +164,3 @@ async def delete_file_by_id(
     del files[file_id]
 
     return {"status": "ok"}
-
-
-async def introspect(auth: str):
-    headers = {
-        "accept": "application/json",
-        "auth": auth
-    }
-    url = "http://" + authentication_url + ":80/auth/introspect"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers, ssl=False) as response:
-            status_code = response.status
-            if status_code != 200:
-                return None
-            body = await response.text()
-            return body
-
-
-async def auth_check(auth):
-    auth_response = await introspect(auth=auth)
-    if auth_response is None:
-        raise HTTPException(status_code=403, detail='Forbidden')
-
-    return json.loads(auth_response)
