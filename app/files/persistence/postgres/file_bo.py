@@ -1,4 +1,4 @@
-from app.files.domain.persistences.exceptions import NotFoundException
+from app.files.domain.persistences.exceptions import NotFoundException, BadTokenException
 from app.files.domain.persistences.file_bo_interface import FileBOInterface
 from app.files.domain.bo.file_bo import FileBO
 from app.files.models import FileDB
@@ -62,3 +62,18 @@ class FileBOPostgresPersistenceService(FileBOInterface):
         file.number_of_pages = data.number_of_pages
 
         await file.save()
+
+    async def delete_file(self, file_id: int, owner: int) -> str:
+        files = await FileDB.filter(**{"id": file_id, "owner": owner})
+        if len(files) == 0:
+            raise NotFoundException
+
+        file = files[0]
+
+        if file.owner != owner:
+            raise BadTokenException
+
+        path = file.path
+        await file.delete()
+
+        return path

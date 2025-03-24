@@ -16,3 +16,6 @@ class FileBOInterface(ABC):
 
     def update_file(self, file_id: int, data: FileBO):
         pass
+
+    def delete_file(self, file_id: int, owner: int) -> str:
+        pass

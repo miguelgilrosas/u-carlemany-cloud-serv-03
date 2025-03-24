@@ -3,8 +3,9 @@ from fastapi.responses import FileResponse
 from pypdf import PdfMerger
 import uuid
 from pydantic import BaseModel
-import os
 
+from app.files.dependency_injection.domain.delete_file_controllers import DeleteFileControllers
+from app.files.dependency_injection.domain.get_file_controllers import GetFileControllers
 from app.files.dependency_injection.domain.get_files_by_token_controllers import GetFilesByTokenControllers
 from app.files.dependency_injection.domain.post_file_content_controllers import PostFileContentControllers
 from app.files.dependency_injection.domain.post_file_controllers import PostFileControllers
@@ -127,14 +128,15 @@ async def get_file_by_id(
     file_id: str,
     auth: str = Header()
 ) -> FileResponse:
-    user = await auth_check(auth)
+    get_file_controller = GetFileControllers.carlemany()
 
-    if file_id not in files:
+    try:
+        file = await get_file_controller(file_id=file_id, token=auth)
+
+    except NotFoundException:
         raise HTTPException(status_code=404, detail='Not found')
 
-    file = files[file_id]
-
-    if user['id'] != file.owner:
+    except BadTokenException:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     return FileResponse(
@@ -149,18 +151,15 @@ async def delete_file_by_id(
     file_id: str,
     auth: str = Header()
 ) -> dict[str, str]:
-    user = await auth_check(auth)
+    delete_file_controller = DeleteFileControllers.carlemany()
 
-    if file_id not in files:
-        raise HTTPException(status_code=404, detail='Not found')
+    try:
+        await delete_file_controller(file_id=file_id, token=auth)
 
-    file = files[file_id]
-
-    if user['id'] != file.owner:
+    except BadTokenException:
         raise HTTPException(status_code=403, detail='Forbidden')
 
-    if file.path != '':
-        os.remove(file.path)
-    del files[file_id]
+    except NotFoundException:
+        raise HTTPException(status_code=404, detail='Not found')
 
     return {"status": "ok"}
